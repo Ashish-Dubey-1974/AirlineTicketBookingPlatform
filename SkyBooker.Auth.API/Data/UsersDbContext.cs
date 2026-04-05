@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using SkyBooker.Auth.Entities;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace SkyBooker.Auth.Data;
 
@@ -21,9 +20,16 @@ public class UsersDbContext : DbContext
         // ── User entity configuration ─────────────────────────────────────
         modelBuilder.Entity<User>(entity =>
         {
+            // All indexes defined here only — NOT duplicated on the entity class via [Index]
             entity.HasIndex(u => u.Email)
                   .IsUnique()
                   .HasDatabaseName("IX_users_email");
+
+            entity.HasIndex(u => u.Phone)
+                  .HasDatabaseName("IX_users_phone");
+
+            entity.HasIndex(u => u.PassportNumber)
+                  .HasDatabaseName("IX_users_passport_number");
 
             entity.Property(u => u.Role)
                   .HasDefaultValue(UserRoles.Passenger);

@@ -26,9 +26,7 @@ public class RegisterDto
     [Phone]
     [MaxLength(20)]
     public string? Phone { get; set; }
-
-    public string Role { get; set; } = "PASSENGER";
+    
+    [MaxLength(20)]
+    public string? Nationality{get;set;}
 }
-
-
-

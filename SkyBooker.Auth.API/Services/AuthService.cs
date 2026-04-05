@@ -56,14 +56,15 @@ public class AuthService : IAuthService
             throw new InvalidOperationException($"User with email '{dto.Email}' already exists.");
         }
 
-        // 2. Build User entity
+        // 2. Build User entity — role always defaults to PASSENGER on self-registration
         var user = new User
         {
             FullName  = dto.FullName.Trim(),
             Email     = dto.Email.Trim().ToLower(),
             Phone     = dto.Phone?.Trim(),
-            Role      = dto.Role == UserRoles.AirlineStaff ? UserRoles.AirlineStaff : UserRoles.Passenger,
+            Role      = UserRoles.Passenger,   // NEVER trust role from client
             Provider  = AuthProviders.Local,
+            Nationality = dto.Nationality,
             IsActive  = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -276,6 +277,24 @@ public class AuthService : IAuthService
     {
         var users = await _userRepo.FindAll();
         return users.Select(MapToProfileDto).ToList();
+    }
+
+    // ── ASSIGN ROLE ───────────────────────────────────────────────────────────
+    public async Task<UserProfileDto?> AssignRole(int userId, string role)
+    {
+        var validRoles = new[] { UserRoles.Passenger, UserRoles.AirlineStaff, UserRoles.Admin };
+        if (!validRoles.Contains(role))
+            throw new ArgumentException($"Invalid role '{role}'. Valid roles: {string.Join(", ", validRoles)}");
+
+        var user = await _userRepo.FindByUserId(userId)
+            ?? throw new KeyNotFoundException($"User {userId} not found");
+
+        user.Role      = role;
+        user.UpdatedAt = DateTime.UtcNow;
+        var updated = await _userRepo.Update(user);
+
+        _logger.LogWarning("Role assigned: UserId={UserId} → Role={Role}", userId, role);
+        return MapToProfileDto(updated);
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────────────

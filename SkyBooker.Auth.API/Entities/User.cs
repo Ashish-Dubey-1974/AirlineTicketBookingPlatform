@@ -1,17 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace SkyBooker.Auth.Entities;
 
 /// <summary>
 /// Core user entity for SkyBooker platform.
 /// Supports both local (email/password) and OAuth (Google) authentication.
+/// NOTE: All indexes are defined in UsersDbContext.OnModelCreating — not duplicated here.
 /// </summary>
 [Table("users")]
-[Index(nameof(Email), IsUnique = true)]
-[Index(nameof(Phone))]
-[Index(nameof(PassportNumber))]
 public class User
 {
     [Key]

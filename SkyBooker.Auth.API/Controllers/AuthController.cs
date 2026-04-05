@@ -44,7 +44,7 @@ public class AuthController : ControllerBase
             var user    = await _authService.Register(dto);
             var profile = _authService.MapToProfileDto(user);
             _logger.LogInformation("New user registered: {Email}", dto.Email);
-            return CreatedAtAction(nameof(GetProfile), null, profile);
+            return CreatedAtAction(nameof(GetProfile), new { }, profile);
         }
         catch (InvalidOperationException ex)
         {
@@ -221,6 +221,31 @@ public class AuthController : ControllerBase
     {
         var users = await _authService.GetAllUsers();
         return Ok(users);
+    }
+
+    // ── PUT /api/auth/users/{id}/role ─────────────────────────────────────────
+    /// <summary>Assign a role to a user — Admin only</summary>
+    [HttpPut("users/{id:int}/role")]
+    [Authorize(Roles = UserRoles.Admin)]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AssignRole(int id, [FromBody] string role)
+    {
+        try
+        {
+            var updated = await _authService.AssignRole(id, role);
+            if (updated == null) return NotFound();
+            return Ok(updated);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ErrorResponseDto { Message = ex.Message, StatusCode = 400 });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ErrorResponseDto { Message = ex.Message, StatusCode = 404 });
+        }
     }
 
     // ── GET /api/auth/users/{id} ──────────────────────────────────────────────

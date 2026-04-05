@@ -65,7 +65,15 @@ try
     var jwtIssuer   = builder.Configuration["JwtSettings:Issuer"]   ?? "SkyBooker.Auth.API";
     var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "SkyBooker.Clients";
 
-    builder.Services
+    var googleClientId     = builder.Configuration["Google:ClientId"];
+    var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+    // Google OAuth is enabled only when real credentials are provided (not placeholders).
+    // Set actual values in appsettings.json or Azure Key Vault before Day 2 implementation.
+    var googleEnabled = !string.IsNullOrWhiteSpace(googleClientId)
+                     && !string.IsNullOrWhiteSpace(googleClientSecret)
+                     && googleClientId != "REPLACE_WITH_GOOGLE_CLIENT_ID";
+
+    var authBuilder = builder.Services
         .AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -101,14 +109,21 @@ try
                     return Task.CompletedTask;
                 }
             };
-        })
-        .AddGoogle(googleOptions =>
-        {
-            // Google OAuth2 — configure in appsettings.json
-            // IMPORTANT: Set real ClientId/ClientSecret in production via Azure Key Vault
-            googleOptions.ClientId     = builder.Configuration["Google:ClientId"] ?? "";
-            googleOptions.ClientSecret = builder.Configuration["Google:ClientSecret"] ?? "";
         });
+
+    if (googleEnabled)
+    {
+        authBuilder.AddGoogle(googleOptions =>
+        {
+            googleOptions.ClientId     = googleClientId!;
+            googleOptions.ClientSecret = googleClientSecret!;
+        });
+        Log.Information("Google OAuth2 enabled.");
+    }
+    else
+    {
+        Log.Warning("Google OAuth2 is DISABLED — set real Google:ClientId and Google:ClientSecret to enable. (Day 2 task)");
+    }
 
     // ════════════════════════════════════════════════════════════════
     // AUTHORIZATION — Role-based policies

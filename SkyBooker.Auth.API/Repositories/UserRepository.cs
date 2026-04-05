@@ -88,10 +88,18 @@ public class UserRepository : IUserRepository
 
     public async Task<User> Update(User user)
     {
-        _context.Users.Update(user);
+        // Use FindAsync (tracked) so EF Core does not blindly overwrite all columns
+        // when the entity was previously loaded with AsNoTracking.
+        var tracked = await _context.Users.FindAsync(user.UserId);
+        if (tracked == null)
+            throw new KeyNotFoundException($"User {user.UserId} not found for update.");
+
+        // Copy only the fields we allow to be updated
+        _context.Entry(tracked).CurrentValues.SetValues(user);
+
         await _context.SaveChangesAsync();
         _logger.LogInformation("User updated: UserId={UserId}", user.UserId);
-        return user;
+        return tracked;
     }
 
     public async Task DeleteByUserId(int userId)

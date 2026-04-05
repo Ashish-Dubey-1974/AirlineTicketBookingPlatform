@@ -68,6 +68,12 @@ public interface IAuthService
     /// <summary>Get all users. Admin use only.</summary>
     Task<IList<UserProfileDto>> GetAllUsers();
 
+    /// <summary>
+    /// Assign a role to a user. Admin use only.
+    /// Valid roles: PASSENGER, AIRLINE_STAFF, ADMIN.
+    /// </summary>
+    Task<UserProfileDto?> AssignRole(int userId, string role);
+
     /// <summary>Map User entity to safe UserProfileDto (no PasswordHash).</summary>
     UserProfileDto MapToProfileDto(User user);
 }
