@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 using SkyBooker.Auth.Data;
 using SkyBooker.Auth.Repositories;
@@ -60,12 +59,12 @@ try
     // ════════════════════════════════════════════════════════════════
     // AUTHENTICATION — JWT Bearer + Google OAuth2
     // ════════════════════════════════════════════════════════════════
-    var jwtSecret  = builder.Configuration["JwtSettings:Secret"]
+    var jwtSecret = builder.Configuration["JwtSettings:Secret"]
         ?? throw new InvalidOperationException("JwtSettings:Secret is not configured!");
-    var jwtIssuer   = builder.Configuration["JwtSettings:Issuer"]   ?? "SkyBooker.Auth.API";
+    var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "SkyBooker.Auth.API";
     var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "SkyBooker.Clients";
 
-    var googleClientId     = builder.Configuration["Google:ClientId"];
+    var googleClientId = builder.Configuration["Google:ClientId"];
     var googleClientSecret = builder.Configuration["Google:ClientSecret"];
     // Google OAuth is enabled only when real credentials are provided (not placeholders).
     // Set actual values in appsettings.json or Azure Key Vault before Day 2 implementation.
@@ -77,21 +76,21 @@ try
         .AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
         })
         .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = new SymmetricSecurityKey(
+                IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(jwtSecret)),
-                ValidateIssuer           = true,
-                ValidIssuer              = jwtIssuer,
-                ValidateAudience         = true,
-                ValidAudience            = jwtAudience,
-                ValidateLifetime         = true,
-                ClockSkew                = TimeSpan.Zero  // no clock drift tolerance
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero  // no clock drift tolerance
             };
 
             // JWT events for logging
@@ -115,7 +114,7 @@ try
     {
         authBuilder.AddGoogle(googleOptions =>
         {
-            googleOptions.ClientId     = googleClientId!;
+            googleOptions.ClientId = googleClientId!;
             googleOptions.ClientSecret = googleClientSecret!;
         });
         Log.Information("Google OAuth2 enabled.");
@@ -130,10 +129,10 @@ try
     // ════════════════════════════════════════════════════════════════
     builder.Services.AddAuthorization(options =>
     {
-        options.AddPolicy("AdminOnly",     policy => policy.RequireRole("ADMIN"));
+        options.AddPolicy("AdminOnly", policy => policy.RequireRole("ADMIN"));
         options.AddPolicy("PassengerOnly", policy => policy.RequireRole("PASSENGER"));
-        options.AddPolicy("StaffOnly",     policy => policy.RequireRole("AIRLINE_STAFF"));
-        options.AddPolicy("StaffOrAdmin",  policy => policy.RequireRole("AIRLINE_STAFF", "ADMIN"));
+        options.AddPolicy("StaffOnly", policy => policy.RequireRole("AIRLINE_STAFF"));
+        options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("AIRLINE_STAFF", "ADMIN"));
     });
 
     // ════════════════════════════════════════════════════════════════
@@ -172,20 +171,20 @@ try
     {
         options.SwaggerDoc("v1", new OpenApiInfo
         {
-            Title       = "SkyBooker Auth API",
-            Version     = "v1",
+            Title = "SkyBooker Auth API",
+            Version = "v1",
             Description = "Authentication and User Management service for SkyBooker platform",
-            Contact     = new OpenApiContact { Name = "SkyBooker Dev Team" }
+            Contact = new OpenApiContact { Name = "SkyBooker Dev Team" }
         });
 
         // Add JWT Bearer auth to Swagger UI
         options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
             Description = "JWT Authorization header. Enter: Bearer {token}",
-            Name        = "Authorization",
-            In          = ParameterLocation.Header,
-            Type        = SecuritySchemeType.ApiKey,
-            Scheme      = "Bearer"
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.ApiKey,
+            Scheme = "Bearer"
         });
         options.AddSecurityRequirement(new OpenApiSecurityRequirement
         {
@@ -233,15 +232,12 @@ try
     // ════════════════════════════════════════════════════════════════
 
     // 1. Swagger (dev only)
-    if (app.Environment.IsDevelopment())
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(c =>
-        {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyBooker Auth API v1");
-            c.RoutePrefix = string.Empty;  // Swagger at root URL
-        });
-    }
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyBooker Auth API v1");
+        c.RoutePrefix = "swagger"; 
+    });
 
     // 2. HTTPS redirect
     app.UseHttpsRedirection();

@@ -27,6 +27,6 @@ public class RegisterDto
     [MaxLength(20)]
     public string? Phone { get; set; }
     
-    [MaxLength(20)]
+    [MaxLength(60)]
     public string? Nationality{get;set;}
 }
