@@ -53,8 +53,10 @@ $RECYCLE.BIN/
 *.sln.iml
 
 # Secrets — NEVER commit these!
-appsettings.Production.json
-appsettings.Secrets.json
+SkyBooker.Auth.API/appsettings.Development.json
+SkyBooker.Auth.API/appsettings.json
+appsettings.Development.json
+appsettings.json
 secrets.json
 *.pfx
 *.p12
@@ -65,5 +67,10 @@ secrets.json
 
 # Docker
 docker-compose.override.yml
+
+
+#.Net
 bin/
 obj/
+appsettings.json
+appsettings.Development.json
