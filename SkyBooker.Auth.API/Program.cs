@@ -66,11 +66,7 @@ try
 
     var googleClientId = builder.Configuration["Google:ClientId"];
     var googleClientSecret = builder.Configuration["Google:ClientSecret"];
-    // Google OAuth is enabled only when real credentials are provided (not placeholders).
-    // Set actual values in appsettings.json or Azure Key Vault before Day 2 implementation.
-    var googleEnabled = !string.IsNullOrWhiteSpace(googleClientId)
-                     && !string.IsNullOrWhiteSpace(googleClientSecret)
-                     && googleClientId != "REPLACE_WITH_GOOGLE_CLIENT_ID";
+    var googleEnabled = !string.IsNullOrWhiteSpace(googleClientId)&& !string.IsNullOrWhiteSpace(googleClientSecret);
 
     var authBuilder = builder.Services
         .AddAuthentication(options =>
@@ -236,7 +232,7 @@ try
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "SkyBooker Auth API v1");
-        c.RoutePrefix = "swagger"; 
+        c.RoutePrefix = "index.html"; 
     });
 
     // 2. HTTPS redirect
