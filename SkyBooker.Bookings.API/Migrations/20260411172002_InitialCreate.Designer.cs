@@ -1,0 +1,154 @@
+﻿
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using SkyBooker.Bookings.API.Data;
+
+#nullable disable
+
+namespace SkyBooker.Bookings.API.Migrations
+{
+    [DbContext(typeof(BookingDbContext))]
+    [Migration("20260411172002_InitialCreate")]
+    partial class InitialCreate
+    {
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("SkyBooker.Bookings.API.Entities.Booking", b =>
+                {
+                    b.Property<string>("BookingId")
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)")
+                        .HasColumnName("booking_id");
+
+                    b.Property<decimal>("AncillaryCharges")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ancillary_charges");
+
+                    b.Property<decimal>("BaseFare")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("base_fare");
+
+                    b.Property<DateTime>("BookedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasColumnName("booked_at")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("cancellation_reason");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("cancelled_at");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("confirmed_at");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("contact_email");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("contact_phone");
+
+                    b.Property<int>("FlightId")
+                        .HasColumnType("int")
+                        .HasColumnName("flight_id");
+
+                    b.Property<int>("LuggageKg")
+                        .HasColumnType("int")
+                        .HasColumnName("luggage_kg");
+
+                    b.Property<string>("MealPreference")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("meal_preference");
+
+                    b.Property<string>("PaymentId")
+                        .HasMaxLength(36)
+                        .HasColumnType("nvarchar(36)")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("PnrCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("pnr_code");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("refund_amount");
+
+                    b.Property<int?>("ReturnFlightId")
+                        .HasColumnType("int")
+                        .HasColumnName("return_flight_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("PENDING")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("Taxes")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("taxes");
+
+                    b.Property<decimal>("TotalFare")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("total_fare");
+
+                    b.Property<string>("TripType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("trip_type");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("BookingId");
+
+                    b.HasIndex("BookedAt");
+
+                    b.HasIndex("FlightId");
+
+                    b.HasIndex("PnrCode")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("bookings");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}
