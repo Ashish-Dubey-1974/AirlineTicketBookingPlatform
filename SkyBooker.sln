@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Flights.API", "Sk
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Seat.API", "SkyBooker.Seat.API\SkyBooker.Seat.API.csproj", "{A1000003-0000-0000-0000-000000000003}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Booking.API", "SkyBooker.Booking.API\SkyBooker.Booking.API.csproj", "{A1000004-0000-0000-0000-000000000004}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Bookings.API", "SkyBooker.Bookings.API\SkyBooker.Bookings.API.csproj", "{A1000004-0000-0000-0000-000000000004}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Passenger.API", "SkyBooker.Passenger.API\SkyBooker.Passenger.API.csproj", "{A1000005-0000-0000-0000-000000000005}"
 EndProject
