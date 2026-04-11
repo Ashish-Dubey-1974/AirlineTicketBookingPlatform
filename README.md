@@ -1,7 +1,5 @@
 # ✈ SkyBooker — Airline Ticket Booking System (.NET 8)
 
-> **Day 1 Deliverable** — Solution scaffold + Auth Service (fully implemented) + All 8 service shells
-
 ---
 
 
