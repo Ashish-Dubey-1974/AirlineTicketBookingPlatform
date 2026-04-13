@@ -150,7 +150,7 @@ try
         {
             var allowedOrigins = builder.Configuration
                 .GetSection("Cors:AllowedOrigins")
-                .Get<string[]>() ?? ["http://localhost:5000", "https://localhost:5001"];
+                .Get<string[]>() ?? ["http://localhost:5000", "https://localhost:5001","http://localhost:4200"];
 
             policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()

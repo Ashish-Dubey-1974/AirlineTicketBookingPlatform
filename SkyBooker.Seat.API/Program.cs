@@ -114,7 +114,7 @@ try
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("AllowSkyBookerWeb", policy =>
-            policy.WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:5010")
+            policy.WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:5010","http://localhost:4200")
                   .AllowAnyHeader()
                   .AllowAnyMethod());
     });
