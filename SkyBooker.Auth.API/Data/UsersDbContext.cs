@@ -31,6 +31,11 @@ public class UsersDbContext : DbContext
             entity.HasIndex(u => u.PassportNumber)
                   .HasDatabaseName("IX_users_passport_number");
 
+            entity.HasIndex(u => u.GoogleId)
+                  .IsUnique()
+                  .HasFilter("[google_id] IS NOT NULL")
+                  .HasDatabaseName("IX_users_google_id");
+
             entity.Property(u => u.Role)
                   .HasDefaultValue(UserRoles.Passenger);
 

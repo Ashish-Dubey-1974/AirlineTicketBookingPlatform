@@ -78,6 +78,7 @@ try
     });
 
     // Dependency Injection
+    builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<IBookingRepository, BookingRepository>();
     builder.Services.AddScoped<IBookingService, BookingService>();
 

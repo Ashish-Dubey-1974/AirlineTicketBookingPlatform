@@ -128,7 +128,9 @@ public class SeatService : ISeatService
         IsAisle = s.IsAisle,
         HasExtraLegroom = s.HasExtraLegroom,
         Status = s.Status,
-        PriceMultiplier = s.PriceMultiplier
+        PriceMultiplier = s.PriceMultiplier,
+        HeldSince = s.HeldSince,
+        HeldByUserId = s.HeldByUserId
     };
 
     public async Task<IList<SeatResponseDto>> GetAvailableByClassAsync(int flightId, string seatClass)

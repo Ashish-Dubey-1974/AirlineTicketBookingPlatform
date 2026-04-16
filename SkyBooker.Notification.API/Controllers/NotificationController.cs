@@ -85,6 +85,27 @@ public class NotificationController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(NotificationResponseDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SendMyNotification([FromBody] SendMyNotificationDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        var result = await _notificationService.SendNotificationAsync(new SendNotificationDto
+        {
+            RecipientId = userId.Value,
+            Type = dto.Type,
+            Title = dto.Title,
+            Message = dto.Message,
+            RelatedBookingId = dto.RelatedBookingId,
+            Channel = "APP"
+        });
+
+        return Ok(result);
+    }
+
     // POST /api/notifications/send - Send notification (Admin only)
     [HttpPost("send")]
     [Authorize(Policy = "AdminOnly")]

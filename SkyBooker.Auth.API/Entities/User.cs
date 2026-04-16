@@ -66,6 +66,7 @@ public class User
     [Column("profile_picture_url")]
     public string? ProfilePictureUrl { get; set; }
 
+    [MaxLength(128)]
     [Column("google_id")]
     public string? GoogleId { get; set; }  // stores Google sub claim
 
@@ -78,5 +79,4 @@ public class User
     [Column("last_login_at")]
     public DateTime? LastLoginAt { get; set; }
 }
-
 

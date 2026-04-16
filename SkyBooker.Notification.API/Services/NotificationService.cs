@@ -244,6 +244,9 @@ public class NotificationService : INotificationService
 
     private async Task SendViaChannel(string channel, int userId, string title, string message, string? bookingId)
     {
+        if (channel == NotificationChannel.App)
+            return;
+
         // Get user contact from Auth Service
         var authClient = _httpClientFactory.CreateClient("AuthService");
         var user = await authClient.GetFromJsonAsync<UserContact>($"/api/auth/users/{userId}/contact");

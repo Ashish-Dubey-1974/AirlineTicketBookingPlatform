@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -14,17 +15,20 @@ public class PaymentService : IPaymentService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentService> _logger;
     private readonly IConfiguration _config;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public PaymentService(
         PaymentDbContext context,
         IHttpClientFactory httpClientFactory,
         ILogger<PaymentService> logger,
-        IConfiguration config)
+        IConfiguration config,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _config = config;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<RazorpayOrderResponseDto> InitiatePaymentAsync(InitiatePaymentDto dto, int userId)
@@ -38,7 +42,23 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException($"Payment already completed for booking {dto.BookingId}");
         }
 
-        // Create payment record
+        if (existingPayment != null)
+        {
+            existingPayment.Amount = dto.Amount;
+            existingPayment.PaymentMode = dto.PaymentMode;
+            existingPayment.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return new RazorpayOrderResponseDto
+            {
+                OrderId = $"mock_existing_{existingPayment.PaymentId[..8]}",
+                PaymentId = existingPayment.PaymentId,
+                Amount = existingPayment.Amount,
+                Currency = existingPayment.Currency,
+                Status = "created"
+            };
+        }
+
         var payment = new Payments
         {
             PaymentId = Guid.NewGuid().ToString(),
@@ -68,6 +88,39 @@ public class PaymentService : IPaymentService
             Currency = "INR",
             Status = "created"
         };
+    }
+
+    public async Task<PaymentResponseDto> CompleteMockPaymentAsync(string paymentId, int userId)
+    {
+        var payment = await _context.Payments
+            .FirstOrDefaultAsync(p => p.PaymentId == paymentId && p.UserId == userId);
+
+        if (payment == null)
+            throw new KeyNotFoundException($"Payment {paymentId} not found");
+
+        if (payment.Status == PaymentStatus.Paid)
+            return MapToResponse(payment);
+
+        if (payment.Status != PaymentStatus.Pending)
+            throw new InvalidOperationException($"Cannot complete payment with status {payment.Status}");
+
+        payment.Status = PaymentStatus.Paid;
+        payment.TransactionId = $"MOCK_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        payment.GatewayResponse = JsonSerializer.Serialize(new
+        {
+            gateway = "MOCK",
+            status = "PAID",
+            completedAt = DateTime.UtcNow,
+            payment.PaymentMode
+        });
+        payment.PaidAt = DateTime.UtcNow;
+        payment.UpdatedAt = DateTime.UtcNow;
+
+        await ConfirmBookingAsync(payment.BookingId, payment.PaymentId);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Mock payment completed: PaymentId={PaymentId}, BookingId={BookingId}", payment.PaymentId, payment.BookingId);
+        return MapToResponse(payment);
     }
 
     public async Task<bool> ProcessWebhookAsync(string payload, string signature, string webhookSecret)
@@ -250,7 +303,7 @@ Thank you for booking with SkyBooker!
     {
         try
         {
-            var bookingClient = _httpClientFactory.CreateClient("BookingService");
+            var bookingClient = CreateServiceClient("BookingService");
             var response = await bookingClient.PutAsJsonAsync(
                 $"/api/bookings/{bookingId}/confirm", paymentId);
 
@@ -260,12 +313,14 @@ Thank you for booking with SkyBooker!
             }
             else
             {
-                _logger.LogWarning("Failed to confirm booking: {BookingId}", bookingId);
+                var body = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to confirm booking {bookingId}: {(int)response.StatusCode} {body}");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error confirming booking {BookingId}", bookingId);
+            throw;
         }
     }
 
@@ -274,7 +329,7 @@ Thank you for booking with SkyBooker!
     {
         try
         {
-            var bookingClient = _httpClientFactory.CreateClient("BookingService");
+            var bookingClient = CreateServiceClient("BookingService");
             var response = await bookingClient.PutAsJsonAsync(
                 $"/api/bookings/{bookingId}/cancel", "Payment refunded");
 
@@ -287,6 +342,20 @@ Thank you for booking with SkyBooker!
         {
             _logger.LogError(ex, "Error cancelling booking {BookingId}", bookingId);
         }
+    }
+
+    private HttpClient CreateServiceClient(string name)
+    {
+        var client = _httpClientFactory.CreateClient(name);
+        var authorization = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+
+        if (!string.IsNullOrWhiteSpace(authorization) &&
+            AuthenticationHeaderValue.TryParse(authorization, out var header))
+        {
+            client.DefaultRequestHeaders.Authorization = header;
+        }
+
+        return client;
     }
 
     private static PaymentResponseDto MapToResponse(Payments p) => new()

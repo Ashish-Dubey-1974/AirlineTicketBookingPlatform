@@ -1,4 +1,5 @@
 using System.Text;
+using System.Net.Http.Headers;
 using Microsoft.EntityFrameworkCore;
 using SkyBooker.Bookings.API.DTOs;
 using SkyBooker.Bookings.API.Entities;
@@ -12,17 +13,20 @@ public class BookingService : IBookingService
 {
     private readonly IBookingRepository _bookingRepo;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<BookingService> _logger;
 
     public BookingService(
         IBookingRepository bookingRepo,
         IHttpClientFactory httpClientFactory,
+        IHttpContextAccessor httpContextAccessor,
         IPublishEndpoint publishEndpoint,
         ILogger<BookingService> logger)
     {
         _bookingRepo = bookingRepo;
         _httpClientFactory = httpClientFactory;
+        _httpContextAccessor = httpContextAccessor;
         _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
@@ -55,7 +59,7 @@ public class BookingService : IBookingService
         int flightId, int passengerCount, int extraBaggageKg, bool hasMeal)
     {
         // Call Flight API to get base price
-        var flightClient = _httpClientFactory.CreateClient("FlightService");
+        var flightClient = CreateServiceClient("FlightService");
         var flightResponse = await flightClient.GetFromJsonAsync<FlightPriceDto>(
             $"/api/flights/{flightId}/price");
 
@@ -124,7 +128,7 @@ public class BookingService : IBookingService
         var savedBooking = await _bookingRepo.CreateAsync(booking);
 
         // 5. Call Passenger API to save passenger details
-        var passengerClient = _httpClientFactory.CreateClient("PassengerService");
+        var passengerClient = CreateServiceClient("PassengerService");
         foreach (var passenger in dto.Passengers)
         {
             var passengerDto = new
@@ -147,14 +151,14 @@ public class BookingService : IBookingService
         }
 
         // 6. Call Seat API to confirm seats (change from HELD to CONFIRMED)
-        var seatClient = _httpClientFactory.CreateClient("SeatService");
+        var seatClient = CreateServiceClient("SeatService");
         foreach (var passenger in dto.Passengers)
         {
             await seatClient.PutAsync($"/api/seats/{passenger.SeatId}/confirm", null);
         }
 
         // 7. Call Flight API to decrement available seats
-        var flightServiceClient = _httpClientFactory.CreateClient("FlightService");
+        var flightServiceClient = CreateServiceClient("FlightService");
         await flightServiceClient.PutAsync(
             $"/api/flights/{dto.FlightId}/decrement-seats?count={dto.PassengerCount}",
             null);
@@ -231,10 +235,10 @@ public class BookingService : IBookingService
         await ReleaseSeatsOnCancellationAsync(bookingId);
 
         // Call Flight API to increment available seats
-        var flightClient = _httpClientFactory.CreateClient("FlightService");
+        var flightClient = CreateServiceClient("FlightService");
 
         // Get passenger count from Passenger API
-        var passengerClient = _httpClientFactory.CreateClient("PassengerService");
+        var passengerClient = CreateServiceClient("PassengerService");
         var passengerResponse = await passengerClient.GetFromJsonAsync<int>(
             $"/api/passengers/count/{bookingId}");
         var passengerCount = passengerResponse;
@@ -267,13 +271,13 @@ public class BookingService : IBookingService
     // ─────────────────────────────────────────────────────────────
     public async Task<bool> ReleaseSeatsOnCancellationAsync(string bookingId)
     {
-        var passengerClient = _httpClientFactory.CreateClient("PassengerService");
+        var passengerClient = CreateServiceClient("PassengerService");
         var passengers = await passengerClient.GetFromJsonAsync<List<PassengerSeatDto>>(
             $"/api/passengers/booking/{bookingId}");
 
         if (passengers == null) return false;
 
-        var seatClient = _httpClientFactory.CreateClient("SeatService");
+        var seatClient = CreateServiceClient("SeatService");
         foreach (var passenger in passengers)
         {
             await seatClient.PutAsync($"/api/seats/{passenger.SeatId}/release", null);
@@ -339,7 +343,7 @@ public class BookingService : IBookingService
         if (!string.IsNullOrEmpty(dto.MealPreference))
         {
             // Get passenger count from Passenger API
-            var passengerClient = _httpClientFactory.CreateClient("PassengerService");
+            var passengerClient = CreateServiceClient("PassengerService");
             var passengerCount = await passengerClient.GetFromJsonAsync<int>(
                 $"/api/passengers/count/{bookingId}");
 
@@ -404,7 +408,7 @@ public class BookingService : IBookingService
     private async Task<BookingResponseDto> MapToResponseDto(Booking booking)
     {
         // Fetch flight details from Flight API
-        var flightClient = _httpClientFactory.CreateClient("FlightService");
+        var flightClient = CreateServiceClient("FlightService");
         var flightInfo = await flightClient.GetFromJsonAsync<FlightInfoDto>(
             $"/api/flights/{booking.FlightId}");
 
@@ -416,7 +420,7 @@ public class BookingService : IBookingService
         }
 
         // Fetch passengers from Passenger API
-        var passengerClient = _httpClientFactory.CreateClient("PassengerService");
+        var passengerClient = CreateServiceClient("PassengerService");
         var passengers = await passengerClient.GetFromJsonAsync<List<PassengerInfoDto>>(
             $"/api/passengers/booking/{booking.BookingId}");
 
@@ -446,6 +450,21 @@ public class BookingService : IBookingService
             Passengers = passengers ?? new List<PassengerInfoDto>()
         };
     }
+
+    private HttpClient CreateServiceClient(string name)
+    {
+        var client = _httpClientFactory.CreateClient(name);
+        var authorization = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+
+        if (!string.IsNullOrWhiteSpace(authorization) &&
+            AuthenticationHeaderValue.TryParse(authorization, out var header))
+        {
+            client.DefaultRequestHeaders.Authorization = header;
+        }
+
+        return client;
+    }
+
     public async Task<IList<BookingResponseDto>> GetPastBookingsAsync(int userId)
     {
         var bookings = await _bookingRepo.GetPastBookingsAsync(userId);

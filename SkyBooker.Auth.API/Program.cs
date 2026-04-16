@@ -65,10 +65,9 @@ try
     var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "SkyBooker.Clients";
 
     var googleClientId = builder.Configuration["Google:ClientId"];
-    var googleClientSecret = builder.Configuration["Google:ClientSecret"];
-    var googleEnabled = !string.IsNullOrWhiteSpace(googleClientId)&& !string.IsNullOrWhiteSpace(googleClientSecret);
+    var googleEnabled = !string.IsNullOrWhiteSpace(googleClientId);
 
-    var authBuilder = builder.Services
+    builder.Services
         .AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -106,19 +105,9 @@ try
             };
         });
 
-    if (googleEnabled)
-    {
-        authBuilder.AddGoogle(googleOptions =>
-        {
-            googleOptions.ClientId = googleClientId!;
-            googleOptions.ClientSecret = googleClientSecret!;
-        });
-        Log.Information("Google OAuth2 enabled.");
-    }
-    else
-    {
-        Log.Warning("Google OAuth2 is DISABLED — set real Google:ClientId and Google:ClientSecret to enable. (Day 2 task)");
-    }
+    Log.Information(googleEnabled
+        ? "Google ID token validation enabled."
+        : "Google ID token validation is DISABLED - set Google:ClientId to enable it.");
 
     // ════════════════════════════════════════════════════════════════
     // AUTHORIZATION — Role-based policies

@@ -6,6 +6,7 @@ public interface IPaymentService
 {
     // Payment initiation
     Task<RazorpayOrderResponseDto> InitiatePaymentAsync(InitiatePaymentDto dto, int userId);
+    Task<PaymentResponseDto> CompleteMockPaymentAsync(string paymentId, int userId);
     
     // Webhook processing
     Task<bool> ProcessWebhookAsync(string payload, string signature, string webhookSecret);

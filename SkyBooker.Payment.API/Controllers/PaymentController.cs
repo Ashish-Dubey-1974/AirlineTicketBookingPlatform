@@ -45,6 +45,31 @@ public class PaymentController : ControllerBase
         }
     }
 
+    [HttpPost("{paymentId}/mock-complete")]
+    [Authorize(Policy = "PassengerOnly")]
+    [ProducesResponseType(typeof(PaymentResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CompleteMockPayment(string paymentId)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        try
+        {
+            var result = await _paymentService.CompleteMockPaymentAsync(paymentId, userId.Value);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new ErrorResponseDto { Message = ex.Message, StatusCode = 404 });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ErrorResponseDto { Message = ex.Message, StatusCode = 400 });
+        }
+    }
+
     // POST /api/payments/webhook - Razorpay/Stripe webhook
     [HttpPost("webhook")]
     [AllowAnonymous]

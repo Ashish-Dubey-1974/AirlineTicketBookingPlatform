@@ -83,6 +83,14 @@ public class SeatController : ControllerBase
         return Ok(new { message = "Seat released" });
     }
 
+    [HttpPut("{seatId}/confirm")]
+    [Authorize]
+    public async Task<IActionResult> ConfirmSeat(int seatId)
+    {
+        await _seatService.ConfirmSeatAsync(seatId);
+        return Ok(new { message = "Seat confirmed" });
+    }
+
     [HttpGet("count/{flightId}/{seatClass}")]
     [AllowAnonymous]
     public async Task<IActionResult> CountAvailableByClass(int flightId, string seatClass)

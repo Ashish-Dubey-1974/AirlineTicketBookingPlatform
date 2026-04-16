@@ -155,6 +155,9 @@ public class AuthService : IAuthService
         var fullName = payload.Name ?? payload.Email;
         var picture = payload.Picture;
 
+        if (payload.EmailVerified != true)
+            throw new UnauthorizedAccessException("Google account email is not verified.");
+
         _logger.LogInformation("Google OAuth: validated token for {Email} (sub={GoogleId})", email, googleId);
 
         // 2. Try to find existing user by Google sub claim first, then by email
@@ -185,12 +188,22 @@ public class AuthService : IAuthService
         }
         else
         {
-            // 3b. Existing user — update Google ID and last login if needed
-            if (user.GoogleId == null)
+            if (!user.IsActive)
+                throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
+
+            if (!string.IsNullOrWhiteSpace(user.GoogleId) && user.GoogleId != googleId)
+                throw new UnauthorizedAccessException("This email is already linked to another Google account.");
+
+            // 3b. Existing user - link Google ID and keep password login available
+            if (string.IsNullOrWhiteSpace(user.GoogleId))
             {
                 user.GoogleId = googleId;
-                user.Provider = AuthProviders.Google;
             }
+
+            user.Provider = user.PasswordHash == null
+                ? AuthProviders.Google
+                : AuthProviders.LocalAndGoogle;
+
             if (picture != null)
                 user.ProfilePictureUrl = picture;
 
@@ -201,9 +214,6 @@ public class AuthService : IAuthService
             _logger.LogInformation("Google OAuth: existing user login — UserId={UserId}, Email={Email}",
                 user.UserId, user.Email);
         }
-
-        if (!user.IsActive)
-            throw new UnauthorizedAccessException("Your account has been deactivated. Please contact support.");
 
         // 4. Generate JWT
         var jwtToken = GenerateJwtToken(user);
@@ -360,6 +370,7 @@ public class AuthService : IAuthService
     // ── ASSIGN ROLE ───────────────────────────────────────────────────────────
     public async Task<UserProfileDto?> AssignRole(int userId, string role)
     {
+        role = role.Trim().ToUpperInvariant();
         var validRoles = new[] { UserRoles.Passenger, UserRoles.AirlineStaff, UserRoles.Admin };
         if (!validRoles.Contains(role))
             throw new ArgumentException($"Invalid role '{role}'. Valid: {string.Join(", ", validRoles)}");

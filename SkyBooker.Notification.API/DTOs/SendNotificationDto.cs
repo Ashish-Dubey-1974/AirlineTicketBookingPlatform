@@ -60,3 +60,21 @@ public class SendFlightAlertDto
     [MaxLength(500)]
     public string Message { get; set; } = string.Empty;
 }
+
+public class SendMyNotificationDto
+{
+    [Required]
+    [MaxLength(50)]
+    public string Type { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(200)]
+    public string Title { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(1000)]
+    public string Message { get; set; } = string.Empty;
+
+    [MaxLength(36)]
+    public string? RelatedBookingId { get; set; }
+}

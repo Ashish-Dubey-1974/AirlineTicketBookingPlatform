@@ -83,17 +83,30 @@ public class AuthController : ControllerBase
     [HttpPost("google")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    public async Task<IActionResult> LoginWithGoogle([FromBody] string googleIdToken)
+    public async Task<IActionResult> LoginWithGoogle([FromBody] GoogleLoginDto dto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(new ErrorResponseDto
+            {
+                Message = "Validation failed",
+                Details = string.Join("; ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)),
+                StatusCode = 400
+            });
+
         try
         {
-            var result = await _authService.LoginWithGoogle(googleIdToken);
+            var result = await _authService.LoginWithGoogle(dto.IdToken);
             return Ok(result);
         }
-        catch (NotImplementedException ex)
+        catch (UnauthorizedAccessException ex)
         {
-            // Will be implemented in Day 2
-            return StatusCode(501, new ErrorResponseDto { Message = ex.Message, StatusCode = 501 });
+            return Unauthorized(new ErrorResponseDto { Message = ex.Message, StatusCode = 401 });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(500, new ErrorResponseDto { Message = ex.Message, StatusCode = 500 });
         }
     }
 
@@ -230,11 +243,21 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AssignRole(int id, [FromBody] string role)
+    public async Task<IActionResult> AssignRole(int id, [FromBody] AssignRoleDto dto)
     {
+        if (!ModelState.IsValid)
+            return BadRequest(new ErrorResponseDto
+            {
+                Message = "Validation failed",
+                Details = string.Join("; ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)),
+                StatusCode = 400
+            });
+
         try
         {
-            var updated = await _authService.AssignRole(id, role);
+            var updated = await _authService.AssignRole(id, dto.Role);
             if (updated == null) return NotFound();
             return Ok(updated);
         }

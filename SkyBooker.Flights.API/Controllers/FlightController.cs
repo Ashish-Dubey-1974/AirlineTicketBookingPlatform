@@ -68,6 +68,19 @@ public class FlightController : ControllerBase
         return Ok(flight);
     }
 
+    [HttpGet("{id:int}/price")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPrice(int id)
+    {
+        var flight = await _flightService.GetFlightByIdAsync(id);
+        if (flight is null)
+            return NotFound(new { message = $"Flight with ID {id} not found." });
+
+        return Ok(new { flightId = id, basePrice = flight.BasePrice });
+    }
+
     // ──────────────────────────────────────────────────────────────────
     // GET /api/flights/search
     // Public — one-way search with optional filters
