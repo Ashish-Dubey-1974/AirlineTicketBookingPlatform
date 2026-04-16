@@ -26,7 +26,12 @@ SkyBooker/
 | Day | Service | Status |
 |-----|---------|--------|
 | **Day 1** | Solution Setup + Auth.API | ✅ Done |
-
+| Day 2 | Auth complete + Airline.API | ✅ Done |
+| Day 3 | Flight.API | ✅ Done |
+| Day 4 | Seat.API (ConcurrencyToken) | ✅ Done |
+| Day 5 | Booking.API (Transactions + PNR) | ✅ Done |
+| Day 6 | Passenger.API + Payment.API | ✅ Done |
+| Day 7 | Notification.API + BackgroundServices | ✅ Done |
 
 
 ---
