@@ -8,15 +8,17 @@ public class FlightService : IFlightService
 {
     private readonly IFlightRepository _repo;
     private readonly ILogger<FlightService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     private static readonly string[] ValidStatuses =
         { FlightStatus.Scheduled, FlightStatus.Delayed, FlightStatus.Cancelled,
           FlightStatus.Departed, FlightStatus.Arrived };
 
-    public FlightService(IFlightRepository repo, ILogger<FlightService> logger)
+    public FlightService(IFlightRepository repo, ILogger<FlightService> logger,IHttpClientFactory httpClientFactory)
     {
         _repo = repo;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     // ──────────────────────────────────────────────────────────────────
@@ -36,18 +38,18 @@ public class FlightService : IFlightService
 
         var flight = new Flight
         {
-            FlightNumber        = dto.FlightNumber.ToUpper(),
-            AirlineId           = dto.AirlineId,
-            OriginAirportCode   = dto.OriginAirportCode.ToUpper(),
+            FlightNumber = dto.FlightNumber.ToUpper(),
+            AirlineId = dto.AirlineId,
+            OriginAirportCode = dto.OriginAirportCode.ToUpper(),
             DestinationAirportCode = dto.DestinationAirportCode.ToUpper(),
-            DepartureTime       = dto.DepartureTime,
-            ArrivalTime         = dto.ArrivalTime,
-            DurationMinutes     = duration,
-            AircraftType        = dto.AircraftType,
-            TotalSeats          = dto.TotalSeats,
-            AvailableSeats      = dto.TotalSeats,   // initially all seats available
-            BasePrice           = dto.BasePrice,
-            Status              = FlightStatus.Scheduled
+            DepartureTime = dto.DepartureTime,
+            ArrivalTime = dto.ArrivalTime,
+            DurationMinutes = duration,
+            AircraftType = dto.AircraftType,
+            TotalSeats = dto.TotalSeats,
+            AvailableSeats = dto.TotalSeats,   // initially all seats available
+            BasePrice = dto.BasePrice,
+            Status = FlightStatus.Scheduled
         };
 
         var saved = await _repo.AddAsync(flight);
@@ -79,9 +81,9 @@ public class FlightService : IFlightService
             ?? throw new KeyNotFoundException($"Flight {flightId} not found.");
 
         if (dto.DepartureTime.HasValue) flight.DepartureTime = dto.DepartureTime.Value;
-        if (dto.ArrivalTime.HasValue)   flight.ArrivalTime   = dto.ArrivalTime.Value;
+        if (dto.ArrivalTime.HasValue) flight.ArrivalTime = dto.ArrivalTime.Value;
         if (dto.AircraftType is not null) flight.AircraftType = dto.AircraftType;
-        if (dto.BasePrice.HasValue)      flight.BasePrice     = dto.BasePrice.Value;
+        if (dto.BasePrice.HasValue) flight.BasePrice = dto.BasePrice.Value;
 
         // Recalculate duration if times changed
         flight.DurationMinutes = (int)(flight.ArrivalTime - flight.DepartureTime).TotalMinutes;
@@ -90,7 +92,7 @@ public class FlightService : IFlightService
         if (dto.TotalSeats.HasValue && dto.TotalSeats.Value != flight.TotalSeats)
         {
             int diff = dto.TotalSeats.Value - flight.TotalSeats;
-            flight.TotalSeats     = dto.TotalSeats.Value;
+            flight.TotalSeats = dto.TotalSeats.Value;
             flight.AvailableSeats = Math.Max(0, flight.AvailableSeats + diff);
         }
 
@@ -156,11 +158,11 @@ public class FlightService : IFlightService
         {
             result = request.DepartureTimeRange.ToLower() switch
             {
-                "morning"   => result.Where(f => f.DepartureTime.Hour >= 6  && f.DepartureTime.Hour < 12),
+                "morning" => result.Where(f => f.DepartureTime.Hour >= 6 && f.DepartureTime.Hour < 12),
                 "afternoon" => result.Where(f => f.DepartureTime.Hour >= 12 && f.DepartureTime.Hour < 17),
-                "evening"   => result.Where(f => f.DepartureTime.Hour >= 17 && f.DepartureTime.Hour < 21),
-                "night"     => result.Where(f => f.DepartureTime.Hour >= 21 || f.DepartureTime.Hour < 6),
-                _           => result
+                "evening" => result.Where(f => f.DepartureTime.Hour >= 17 && f.DepartureTime.Hour < 21),
+                "night" => result.Where(f => f.DepartureTime.Hour >= 21 || f.DepartureTime.Hour < 6),
+                _ => result
             };
         }
 
@@ -175,21 +177,21 @@ public class FlightService : IFlightService
         // Outbound leg
         var outboundReq = new FlightSearchRequest
         {
-            Origin        = request.Origin,
-            Destination   = request.Destination,
+            Origin = request.Origin,
+            Destination = request.Destination,
             DepartureDate = request.DepartureDate,
-            Passengers    = request.Passengers,
-            Class         = request.Class
+            Passengers = request.Passengers,
+            Class = request.Class
         };
 
         // Return leg
         var returnReq = new FlightSearchRequest
         {
-            Origin        = request.Destination,
-            Destination   = request.Origin,
+            Origin = request.Destination,
+            Destination = request.Origin,
             DepartureDate = request.ReturnDate,
-            Passengers    = request.Passengers,
-            Class         = request.Class
+            Passengers = request.Passengers,
+            Class = request.Class
         };
 
         var outbound = await SearchFlightsAsync(outboundReq);
@@ -198,13 +200,81 @@ public class FlightService : IFlightService
         return new Dictionary<string, IList<FlightResponse>>
         {
             ["outbound"] = outbound,
-            ["return"]   = returnLeg
+            ["return"] = returnLeg
         };
     }
 
     // ──────────────────────────────────────────────────────────────────
     // AIRLINE STAFF — all flights for an airline
     // ──────────────────────────────────────────────────────────────────
+
+    // ──────────────────────────────────────────────────────────────────
+    // FLIGHT REVENUE  (Airline Staff dashboard)
+    // Calls the Booking service via HTTP to aggregate booking data.
+    // Falls back gracefully if Booking service is unavailable.
+    // ──────────────────────────────────────────────────────────────────
+    public async Task<FlightRevenueDto> GetFlightRevenueAsync(int flightId)
+    {
+        var flight = await _repo.GetByIdAsync(flightId)
+            ?? throw new KeyNotFoundException($"Flight {flightId} not found.");
+
+        int bookedSeats = flight.TotalSeats - flight.AvailableSeats;
+        double utilisation = flight.TotalSeats > 0
+            ? Math.Round((double)bookedSeats / flight.TotalSeats * 100, 1)
+            : 0;
+
+        // Cross-service revenue aggregation via Booking service HTTP call.
+        // IHttpClientFactory must be injected — see constructor addition below.
+        int totalBookings = 0;
+        decimal totalRevenue = 0;
+        var revenueByClass = new Dictionary<string, decimal>
+        {
+            ["Economy"] = 0,
+            ["Business"] = 0,
+            ["First"] = 0
+        };
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("BookingService");
+            var response = await client.GetAsync($"api/bookings/flight/{flightId}/revenue-summary");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var summary = await response.Content.ReadFromJsonAsync<BookingRevenueSummary>();
+                if (summary != null)
+                {
+                    totalBookings = summary.TotalBookings;
+                    totalRevenue = summary.TotalRevenue;
+                    revenueByClass = summary.RevenueByClass;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Non-fatal: return seat utilisation data even if Booking service is down
+            _logger.LogWarning("Could not fetch revenue from BookingService for flight {FlightId}: {Message}",
+                flightId, ex.Message);
+        }
+
+        return new FlightRevenueDto
+        {
+            FlightId = flight.FlightId,
+            FlightNumber = flight.FlightNumber,
+            TotalSeats = flight.TotalSeats,
+            BookedSeats = bookedSeats,
+            SeatUtilisationPercent = utilisation,
+            TotalBookings = totalBookings,
+            TotalRevenue = totalRevenue,
+            RevenueByClass = revenueByClass
+        };
+    }
+
+    // Internal DTO for deserialising the Booking service response
+    private record BookingRevenueSummary(
+        int TotalBookings,
+        decimal TotalRevenue,
+        Dictionary<string, decimal> RevenueByClass);
     public async Task<IList<FlightResponse>> GetFlightsByAirlineAsync(int airlineId)
     {
         var flights = await _repo.GetByAirlineIdAsync(airlineId);
@@ -235,49 +305,54 @@ public class FlightService : IFlightService
     // ──────────────────────────────────────────────────────────────────
     private static FlightResponse MapToResponse(Flight f)
     {
-        int hours   = f.DurationMinutes / 60;
+        int hours = f.DurationMinutes / 60;
         int minutes = f.DurationMinutes % 60;
 
         return new FlightResponse
         {
-            FlightId               = f.FlightId,
-            FlightNumber           = f.FlightNumber,
-            AirlineId              = f.AirlineId,
-            OriginAirportCode      = f.OriginAirportCode,
+            FlightId = f.FlightId,
+            FlightNumber = f.FlightNumber,
+            AirlineId = f.AirlineId,
+            OriginAirportCode = f.OriginAirportCode,
             DestinationAirportCode = f.DestinationAirportCode,
-            DepartureTime          = f.DepartureTime,
-            ArrivalTime            = f.ArrivalTime,
-            DurationMinutes        = f.DurationMinutes,
-            DurationDisplay        = $"{hours}h {minutes}m",
-            Status                 = f.Status,
-            AircraftType           = f.AircraftType,
-            AvailableSeats         = f.AvailableSeats,
-            BasePrice              = f.BasePrice,
+            DepartureTime = f.DepartureTime,
+            ArrivalTime = f.ArrivalTime,
+            DurationMinutes = f.DurationMinutes,
+            DurationDisplay = $"{hours}h {minutes}m",
+            Status = f.Status,
+            AircraftType = f.AircraftType,
+            AvailableSeats = f.AvailableSeats,
+            BasePrice = f.BasePrice,
             // Fare class pricing multipliers (per plan spec)
             FareClasses = new Dictionary<string, FareClassInfo>
             {
                 ["Economy"] = new FareClassInfo
                 {
-                    Price                  = f.BasePrice,
-                    BaggageAllowance       = 15,
-                    IsRefundable           = false,
+                    Price = f.BasePrice,
+                    BaggageAllowance = 15,
+                    IsRefundable = false,
                     CancellationFeePercent = 30
                 },
                 ["Business"] = new FareClassInfo
                 {
-                    Price                  = Math.Round(f.BasePrice * 2.5m, 2),
-                    BaggageAllowance       = 30,
-                    IsRefundable           = true,
+                    Price = Math.Round(f.BasePrice * 2.5m, 2),
+                    BaggageAllowance = 30,
+                    IsRefundable = true,
                     CancellationFeePercent = 10
                 },
                 ["First"] = new FareClassInfo
                 {
-                    Price                  = Math.Round(f.BasePrice * 4.5m, 2),
-                    BaggageAllowance       = 40,
-                    IsRefundable           = true,
+                    Price = Math.Round(f.BasePrice * 4.5m, 2),
+                    BaggageAllowance = 40,
+                    IsRefundable = true,
                     CancellationFeePercent = 0
                 }
             }
         };
+    }
+    public async Task<IList<FlightResponse>> GetFlightsByStatusAsync(string status)
+    {
+        var flights = await _repo.GetByStatusAsync(status);
+        return flights.Select(MapToResponse).ToList();
     }
 }

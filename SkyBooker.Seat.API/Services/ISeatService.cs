@@ -14,4 +14,6 @@ public interface ISeatService
     Task ConfirmSeatAsync(int seatId);
     Task<int> CountAvailableByClassAsync(int flightId, string seatClass);
     Task DeleteSeatsForFlightAsync(int flightId);
+    Task<IList<SeatResponseDto>> GetAvailableByClassAsync(int flightId, string seatClass);
+    Task<SeatResponseDto> UpdateSeatAsync(int seatId, UpdateSeatDto dto);
 }

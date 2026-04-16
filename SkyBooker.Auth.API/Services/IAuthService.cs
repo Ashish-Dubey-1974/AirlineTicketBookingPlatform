@@ -76,4 +76,10 @@ public interface IAuthService
 
     /// <summary>Map User entity to safe UserProfileDto (no PasswordHash).</summary>
     UserProfileDto MapToProfileDto(User user);
+
+    /// <summary>Admin: suspend a user (sets IsActive = false, reversible).</summary>
+    Task SuspendUser(int userId);
+
+    /// <summary>Admin: reactivate a previously suspended user (sets IsActive = true).</summary>
+    Task ReactivateUser(int userId);
 }

@@ -10,13 +10,13 @@ public class SeatService : ISeatService
 {
     private readonly ISeatRepository _repo;
     private readonly ILogger<SeatService> _logger;
-    
+
     public SeatService(ISeatRepository repo, ILogger<SeatService> logger)
     {
         _repo = repo;
         _logger = logger;
     }
-    
+
     public async Task AddSeatsForFlightAsync(int flightId, IList<CreateSeatDto> seats)
     {
         var seatEntities = seats.Select(s => new Seats
@@ -32,24 +32,24 @@ public class SeatService : ISeatService
             PriceMultiplier = s.PriceMultiplier,
             Status = "AVAILABLE"
         }).ToList();
-        
+
         await _repo.AddRangeAsync(seatEntities);
         _logger.LogInformation("Added {Count} seats for Flight {FlightId}", seatEntities.Count, flightId);
     }
-    
+
     public async Task<SeatResponseDto> HoldSeatAsync(int seatId, int userId)
     {
         var seats = await _repo.GetByIdAsync(seatId)
             ?? throw new KeyNotFoundException($"Seat {seatId} not found");
-        
+
         if (seats.Status != "AVAILABLE")
             throw new InvalidOperationException($"Seat {seats.SeatNumber} is not available (status: {seats.Status})");
-        
+
         seats.Status = "HELD";
         seats.HeldSince = DateTime.UtcNow;
         seats.HeldByUserId = userId;
         seats.UpdatedAt = DateTime.UtcNow;
-        
+
         try
         {
             await _repo.UpdateAsync(seats);
@@ -62,7 +62,7 @@ public class SeatService : ISeatService
             throw new InvalidOperationException("Seat was taken by another user. Please try another seat.");
         }
     }
-    
+
     public async Task ReleaseSeatAsync(int seatId)
     {
         var seat = await _repo.GetByIdAsync(seatId);
@@ -76,7 +76,7 @@ public class SeatService : ISeatService
             _logger.LogInformation("Seat {SeatNumber} released", seat.SeatNumber);
         }
     }
-    
+
     public async Task ConfirmSeatAsync(int seatId)
     {
         var seat = await _repo.GetByIdAsync(seatId);
@@ -88,34 +88,34 @@ public class SeatService : ISeatService
             _logger.LogInformation("Seat {SeatNumber} confirmed", seat.SeatNumber);
         }
     }
-    
+
     public async Task<IList<SeatResponseDto>> GetSeatMapAsync(int flightId)
     {
         var seats = await _repo.GetByFlightIdAsync(flightId);
         return seats.Select(MapToResponse).ToList();
     }
-    
+
     public async Task<IList<SeatResponseDto>> GetAvailableSeatsAsync(int flightId)
     {
         var seats = await _repo.GetAvailableByFlightIdAsync(flightId);
         return seats.Select(MapToResponse).ToList();
     }
-    
+
     public async Task<SeatResponseDto?> GetSeatByIdAsync(int seatId)
     {
         var seat = await _repo.GetByIdAsync(seatId);
         return seat == null ? null : MapToResponse(seat);
     }
-    
+
     public async Task<int> CountAvailableByClassAsync(int flightId, string seatClass)
         => await _repo.CountAvailableByClassAsync(flightId, seatClass);
-    
+
     public async Task DeleteSeatsForFlightAsync(int flightId)
     {
         await _repo.DeleteByFlightIdAsync(flightId);
         _logger.LogInformation("Deleted all seats for Flight {FlightId}", flightId);
     }
-    
+
     private static SeatResponseDto MapToResponse(Seats s) => new()
     {
         SeatId = s.SeatId,
@@ -130,4 +130,20 @@ public class SeatService : ISeatService
         Status = s.Status,
         PriceMultiplier = s.PriceMultiplier
     };
+
+    public async Task<IList<SeatResponseDto>> GetAvailableByClassAsync(int flightId, string seatClass)
+    {
+        var seats = await _repo.GetByFlightIdAndClassAsync(flightId, seatClass);
+        return seats.Where(s => s.Status == "AVAILABLE").Select(MapToResponse).ToList();
+    }
+
+    public async Task<SeatResponseDto> UpdateSeatAsync(int seatId, UpdateSeatDto dto)
+    {
+        var seat = await _repo.GetByIdAsync(seatId)
+            ?? throw new KeyNotFoundException($"Seat {seatId} not found.");
+        if (dto.PriceMultiplier.HasValue) seat.PriceMultiplier = dto.PriceMultiplier.Value;
+        if (dto.SeatClass != null) seat.SeatClass = dto.SeatClass;
+        await _repo.UpdateAsync(seat);
+        return MapToResponse(seat);
+    }
 }

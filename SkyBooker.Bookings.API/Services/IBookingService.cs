@@ -26,4 +26,7 @@ public interface IBookingService
     // Internal (called by Payment Service)
     Task<Booking> GetBookingEntityAsync(string bookingId);
     Task<bool> ReleaseSeatsOnCancellationAsync(string bookingId);
+    Task<IList<BookingResponseDto>> GetPastBookingsAsync(int userId);
+    Task<IList<BookingResponseDto>> GetBookingsByFlightAsync(int flightId);
+    Task<IList<BookingResponseDto>> GetAllBookingsAsync();
 }

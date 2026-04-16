@@ -56,4 +56,6 @@ public class PassengerInfoDto
     public string SeatNumber { get; set; } = string.Empty;
     public string? TicketNumber { get; set; }
     public string PassengerType { get; set; } = string.Empty;
+    public bool CheckedIn { get; set; }          // ← ADD THIS
+    public DateTime? CheckedInAt { get; set; } 
 }

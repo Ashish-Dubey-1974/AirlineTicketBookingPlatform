@@ -446,6 +446,32 @@ public class BookingService : IBookingService
             Passengers = passengers ?? new List<PassengerInfoDto>()
         };
     }
+    public async Task<IList<BookingResponseDto>> GetPastBookingsAsync(int userId)
+    {
+        var bookings = await _bookingRepo.GetPastBookingsAsync(userId);
+        var result = new List<BookingResponseDto>();
+        foreach (var booking in bookings)
+            result.Add(await MapToResponseDto(booking));
+        return result;
+    }
+
+    public async Task<IList<BookingResponseDto>> GetBookingsByFlightAsync(int flightId)
+    {
+        var bookings = await _bookingRepo.GetByFlightIdAsync(flightId);
+        var result = new List<BookingResponseDto>();
+        foreach (var booking in bookings)
+            result.Add(await MapToResponseDto(booking));
+        return result;
+    }
+
+    public async Task<IList<BookingResponseDto>> GetAllBookingsAsync()
+    {
+        var bookings = await _bookingRepo.GetAllAsync();
+        var result = new List<BookingResponseDto>();
+        foreach (var booking in bookings)
+            result.Add(await MapToResponseDto(booking));
+        return result;
+    }
 }
 
 // Helper DTO for flight price

@@ -17,7 +17,7 @@ public class AuthController : ControllerBase
     public AuthController(IAuthService authService, ILogger<AuthController> logger)
     {
         _authService = authService;
-        _logger      = logger;
+        _logger = logger;
     }
 
     // ── POST /api/auth/register ───────────────────────────────────────────────
@@ -32,8 +32,8 @@ public class AuthController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(new ErrorResponseDto
             {
-                Message    = "Validation failed",
-                Details    = string.Join("; ", ModelState.Values
+                Message = "Validation failed",
+                Details = string.Join("; ", ModelState.Values
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)),
                 StatusCode = 400
@@ -41,7 +41,7 @@ public class AuthController : ControllerBase
 
         try
         {
-            var user    = await _authService.Register(dto);
+            var user = await _authService.Register(dto);
             var profile = _authService.MapToProfileDto(user);
             _logger.LogInformation("New user registered: {Email}", dto.Email);
             return CreatedAtAction(nameof(GetProfile), new { }, profile);
@@ -50,7 +50,7 @@ public class AuthController : ControllerBase
         {
             return Conflict(new ErrorResponseDto
             {
-                Message    = ex.Message,
+                Message = ex.Message,
                 StatusCode = 409
             });
         }
@@ -71,7 +71,7 @@ public class AuthController : ControllerBase
         if (result == null)
             return Unauthorized(new ErrorResponseDto
             {
-                Message    = "Invalid email or password.",
+                Message = "Invalid email or password.",
                 StatusCode = 401
             });
 
@@ -268,5 +268,23 @@ public class AuthController : ControllerBase
     {
         var claim = User.FindFirst("userId")?.Value;
         return claim != null && int.TryParse(claim, out var id) ? id : null;
+    }
+
+    // PUT /api/auth/users/{id}/suspend
+    [HttpPut("users/{id:int}/suspend")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> SuspendUser(int id)
+    {
+        try { await _authService.SuspendUser(id); return Ok(new { message = $"User {id} suspended." }); }
+        catch (KeyNotFoundException ex) { return NotFound(new ErrorResponseDto { Message = ex.Message, StatusCode = 404 }); }
+    }
+
+    // PUT /api/auth/users/{id}/reactivate
+    [HttpPut("users/{id:int}/reactivate")]
+    [Authorize(Roles = UserRoles.Admin)]
+    public async Task<IActionResult> ReactivateUser(int id)
+    {
+        try { await _authService.ReactivateUser(id); return Ok(new { message = $"User {id} reactivated." }); }
+        catch (KeyNotFoundException ex) { return NotFound(new ErrorResponseDto { Message = ex.Message, StatusCode = 404 }); }
     }
 }

@@ -106,4 +106,15 @@ public class BookingRepository : IBookingRepository
 
     public async Task<bool> ExistsByPnrCodeAsync(string pnrCode)
         => await _context.Bookings.AnyAsync(b => b.PnrCode == pnrCode.ToUpper());
+
+    public async Task<IList<Booking>> GetAllAsync() =>
+        await _context.Bookings
+            .OrderByDescending(b => b.BookedAt)
+            .ToListAsync();
+
+    public async Task<IList<Booking>> GetByUserIdAndStatusAsync(int userId, string status) =>
+    await _context.Bookings
+        .Where(b => b.UserId == userId && b.Status == status)
+        .OrderByDescending(b => b.BookedAt)
+        .ToListAsync();
 }

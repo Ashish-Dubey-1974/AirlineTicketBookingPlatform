@@ -97,15 +97,15 @@ public class FlightController : ControllerBase
 
         var request = new FlightSearchRequest
         {
-            Origin             = origin,
-            Destination        = dest,
-            DepartureDate      = date,
-            Passengers         = passengers,
-            Class              = @class,
-            Airline            = airline,
-            MaxPrice           = maxPrice,
+            Origin = origin,
+            Destination = dest,
+            DepartureDate = date,
+            Passengers = passengers,
+            Class = @class,
+            Airline = airline,
+            MaxPrice = maxPrice,
             DepartureTimeRange = departureTimeRange,
-            Stops              = stops
+            Stops = stops
         };
 
         var flights = await _flightService.SearchFlightsAsync(request);
@@ -137,12 +137,12 @@ public class FlightController : ControllerBase
 
         var request = new RoundTripSearchRequest
         {
-            Origin        = origin,
-            Destination   = dest,
+            Origin = origin,
+            Destination = dest,
             DepartureDate = departure,
-            ReturnDate    = @return,
-            Passengers    = passengers,
-            Class         = @class
+            ReturnDate = @return,
+            Passengers = passengers,
+            Class = @class
         };
 
         var result = await _flightService.SearchRoundTripAsync(request);
@@ -276,5 +276,35 @@ public class FlightController : ControllerBase
     {
         await _flightService.IncrementSeatsAsync(id, count);
         return NoContent();
+    }
+
+    [HttpGet("status/{status}")]
+    [Authorize(Roles = "ADMIN,AIRLINE_STAFF")]
+    public async Task<IActionResult> GetByStatus(string status)
+    {
+        var results = await _flightService.GetFlightsByStatusAsync(status);
+        return Ok(results);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // GET /api/flights/{id}/revenue
+    // Airline Staff — revenue analytics for a specific flight
+    // ──────────────────────────────────────────────────────────────────
+    /// <summary>Get revenue analytics for a flight. Airline Staff only.</summary>
+    [HttpGet("{id:int}/revenue")]
+    [Authorize(Policy = "StaffOnly")]
+    [ProducesResponseType(typeof(FlightRevenueDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetFlightRevenue(int id)
+    {
+        try
+        {
+            var revenue = await _flightService.GetFlightRevenueAsync(id);
+            return Ok(revenue);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
     }
 }

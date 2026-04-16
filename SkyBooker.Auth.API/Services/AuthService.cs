@@ -38,16 +38,16 @@ public class AuthService : IAuthService
         IConfiguration config,
         ILogger<AuthService> logger)
     {
-        _userRepo       = userRepo;
-        _config         = config;
-        _logger         = logger;
+        _userRepo = userRepo;
+        _config = config;
+        _logger = logger;
         _passwordHasher = new PasswordHasher<User>();
 
         // Read JWT settings from appsettings.json
-        _jwtSecret      = config["JwtSettings:Secret"]
+        _jwtSecret = config["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JwtSettings:Secret not configured");
-        _jwtIssuer      = config["JwtSettings:Issuer"] ?? "SkyBooker.Auth.API";
-        _jwtAudience    = config["JwtSettings:Audience"] ?? "SkyBooker.Clients";
+        _jwtIssuer = config["JwtSettings:Issuer"] ?? "SkyBooker.Auth.API";
+        _jwtAudience = config["JwtSettings:Audience"] ?? "SkyBooker.Clients";
         _jwtExpiryHours = int.Parse(config["JwtSettings:ExpiryHours"] ?? "24");
 
         // Google OAuth Client ID for token validation
@@ -65,14 +65,14 @@ public class AuthService : IAuthService
 
         var user = new User
         {
-            FullName    = dto.FullName.Trim(),
-            Email       = dto.Email.Trim().ToLower(),
-            Phone       = dto.Phone?.Trim(),
-            Provider    = AuthProviders.Local,
+            FullName = dto.FullName.Trim(),
+            Email = dto.Email.Trim().ToLower(),
+            Phone = dto.Phone?.Trim(),
+            Provider = AuthProviders.Local,
             Nationality = dto.Nationality,
-            IsActive    = true,
-            CreatedAt   = DateTime.UtcNow,
-            UpdatedAt   = DateTime.UtcNow
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
@@ -108,17 +108,17 @@ public class AuthService : IAuthService
         user.LastLoginAt = DateTime.UtcNow;
         await _userRepo.Update(user);
 
-        var token  = GenerateJwtToken(user);
+        var token = GenerateJwtToken(user);
         var expiry = DateTime.UtcNow.AddHours(_jwtExpiryHours);
 
         _logger.LogInformation("User logged in: UserId={UserId}, Email={Email}", user.UserId, user.Email);
 
         return new AuthResponseDto
         {
-            Token     = token,
+            Token = token,
             TokenType = "Bearer",
             ExpiresAt = expiry,
-            User      = MapToProfileDto(user)
+            User = MapToProfileDto(user)
         };
     }
 
@@ -150,10 +150,10 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Invalid Google ID token.");
         }
 
-        var email    = payload.Email.ToLower();
+        var email = payload.Email.ToLower();
         var googleId = payload.Subject; // Google's unique user sub claim
         var fullName = payload.Name ?? payload.Email;
-        var picture  = payload.Picture;
+        var picture = payload.Picture;
 
         _logger.LogInformation("Google OAuth: validated token for {Email} (sub={GoogleId})", email, googleId);
 
@@ -166,17 +166,17 @@ public class AuthService : IAuthService
             // 3a. New user — auto-register
             user = new User
             {
-                FullName          = fullName,
-                Email             = email,
-                GoogleId          = googleId,
+                FullName = fullName,
+                Email = email,
+                GoogleId = googleId,
                 ProfilePictureUrl = picture,
-                Role              = UserRoles.Passenger,
-                Provider          = AuthProviders.Google,
-                IsActive          = true,
-                PasswordHash      = null, // OAuth users have no password
-                CreatedAt         = DateTime.UtcNow,
-                UpdatedAt         = DateTime.UtcNow,
-                LastLoginAt       = DateTime.UtcNow
+                Role = UserRoles.Passenger,
+                Provider = AuthProviders.Google,
+                IsActive = true,
+                PasswordHash = null, // OAuth users have no password
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
             };
 
             user = await _userRepo.Save(user);
@@ -188,14 +188,14 @@ public class AuthService : IAuthService
             // 3b. Existing user — update Google ID and last login if needed
             if (user.GoogleId == null)
             {
-                user.GoogleId  = googleId;
-                user.Provider  = AuthProviders.Google;
+                user.GoogleId = googleId;
+                user.Provider = AuthProviders.Google;
             }
             if (picture != null)
                 user.ProfilePictureUrl = picture;
 
             user.LastLoginAt = DateTime.UtcNow;
-            user.UpdatedAt   = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
             await _userRepo.Update(user);
 
             _logger.LogInformation("Google OAuth: existing user login — UserId={UserId}, Email={Email}",
@@ -210,10 +210,10 @@ public class AuthService : IAuthService
 
         return new AuthResponseDto
         {
-            Token     = jwtToken,
+            Token = jwtToken,
             TokenType = "Bearer",
             ExpiresAt = DateTime.UtcNow.AddHours(_jwtExpiryHours),
-            User      = MapToProfileDto(user)
+            User = MapToProfileDto(user)
         };
     }
 
@@ -222,18 +222,18 @@ public class AuthService : IAuthService
     {
         try
         {
-            var handler    = new JwtSecurityTokenHandler();
-            var key        = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
+            var handler = new JwtSecurityTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var parameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = key,
-                ValidateIssuer           = true,
-                ValidIssuer              = _jwtIssuer,
-                ValidateAudience         = true,
-                ValidAudience            = _jwtAudience,
-                ValidateLifetime         = true,
-                ClockSkew                = TimeSpan.Zero
+                IssuerSigningKey = key,
+                ValidateIssuer = true,
+                ValidIssuer = _jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = _jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
             };
 
             handler.ValidateToken(token, parameters, out _);
@@ -251,20 +251,20 @@ public class AuthService : IAuthService
     {
         try
         {
-            var handler    = new JwtSecurityTokenHandler();
-            var key        = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
+            var handler = new JwtSecurityTokenHandler();
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
             var parameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = key,
-                ValidateIssuer           = true,
-                ValidIssuer              = _jwtIssuer,
-                ValidateAudience         = true,
-                ValidAudience            = _jwtAudience,
-                ValidateLifetime         = false // allow expired for refresh
+                IssuerSigningKey = key,
+                ValidateIssuer = true,
+                ValidIssuer = _jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = _jwtAudience,
+                ValidateLifetime = false // allow expired for refresh
             };
 
-            var principal   = handler.ValidateToken(token, parameters, out _);
+            var principal = handler.ValidateToken(token, parameters, out _);
             var userIdClaim = principal.FindFirst("userId")?.Value;
 
             if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
@@ -276,10 +276,10 @@ public class AuthService : IAuthService
             var newToken = GenerateJwtToken(user);
             return new AuthResponseDto
             {
-                Token     = newToken,
+                Token = newToken,
                 TokenType = "Bearer",
                 ExpiresAt = DateTime.UtcNow.AddHours(_jwtExpiryHours),
-                User      = MapToProfileDto(user)
+                User = MapToProfileDto(user)
             };
         }
         catch (Exception ex)
@@ -305,12 +305,12 @@ public class AuthService : IAuthService
         var user = await _userRepo.FindByUserId(userId);
         if (user == null) return null;
 
-        user.FullName          = dto.FullName.Trim();
-        user.Phone             = dto.Phone?.Trim();
-        user.PassportNumber    = dto.PassportNumber?.Trim().ToUpper();
-        user.Nationality       = dto.Nationality?.Trim();
+        user.FullName = dto.FullName.Trim();
+        user.Phone = dto.Phone?.Trim();
+        user.PassportNumber = dto.PassportNumber?.Trim().ToUpper();
+        user.Nationality = dto.Nationality?.Trim();
         user.ProfilePictureUrl = dto.ProfilePictureUrl;
-        user.UpdatedAt         = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
 
         var updated = await _userRepo.Update(user);
         _logger.LogInformation("Profile updated: UserId={UserId}", userId);
@@ -331,7 +331,7 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Current password is incorrect.");
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
-        user.UpdatedAt    = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
         await _userRepo.Update(user);
 
         _logger.LogInformation("Password changed: UserId={UserId}", userId);
@@ -343,7 +343,7 @@ public class AuthService : IAuthService
         var user = await _userRepo.FindByUserId(userId)
             ?? throw new KeyNotFoundException($"User {userId} not found");
 
-        user.IsActive  = false;
+        user.IsActive = false;
         user.UpdatedAt = DateTime.UtcNow;
         await _userRepo.Update(user);
 
@@ -367,7 +367,7 @@ public class AuthService : IAuthService
         var user = await _userRepo.FindByUserId(userId)
             ?? throw new KeyNotFoundException($"User {userId} not found");
 
-        user.Role      = role;
+        user.Role = role;
         user.UpdatedAt = DateTime.UtcNow;
         var updated = await _userRepo.Update(user);
 
@@ -378,7 +378,7 @@ public class AuthService : IAuthService
     // ── HELPERS ───────────────────────────────────────────────────────────────
     private string GenerateJwtToken(User user)
     {
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -394,11 +394,11 @@ public class AuthService : IAuthService
         };
 
         var token = new JwtSecurityToken(
-            issuer:             _jwtIssuer,
-            audience:           _jwtAudience,
-            claims:             claims,
-            notBefore:          DateTime.UtcNow,
-            expires:            DateTime.UtcNow.AddHours(_jwtExpiryHours),
+            issuer: _jwtIssuer,
+            audience: _jwtAudience,
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddHours(_jwtExpiryHours),
             signingCredentials: creds
         );
 
@@ -407,17 +407,35 @@ public class AuthService : IAuthService
 
     public UserProfileDto MapToProfileDto(User user) => new UserProfileDto
     {
-        UserId            = user.UserId,
-        FullName          = user.FullName,
-        Email             = user.Email,
-        Phone             = user.Phone,
-        Role              = user.Role,
-        Provider          = user.Provider,
-        IsActive          = user.IsActive,
-        PassportNumber    = user.PassportNumber,
-        Nationality       = user.Nationality,
+        UserId = user.UserId,
+        FullName = user.FullName,
+        Email = user.Email,
+        Phone = user.Phone,
+        Role = user.Role,
+        Provider = user.Provider,
+        IsActive = user.IsActive,
+        PassportNumber = user.PassportNumber,
+        Nationality = user.Nationality,
         ProfilePictureUrl = user.ProfilePictureUrl,
-        CreatedAt         = user.CreatedAt,
-        LastLoginAt       = user.LastLoginAt
+        CreatedAt = user.CreatedAt,
+        LastLoginAt = user.LastLoginAt
     };
+
+    public async Task SuspendUser(int userId)
+    {
+        var user = await _userRepo.FindByUserId(userId)
+            ?? throw new KeyNotFoundException($"User {userId} not found.");
+        user.IsActive = false;
+        await _userRepo.Update(user);
+        _logger.LogWarning("Admin suspended user {UserId}", userId);
+    }
+
+    public async Task ReactivateUser(int userId)
+    {
+        var user = await _userRepo.FindByUserId(userId)
+            ?? throw new KeyNotFoundException($"User {userId} not found.");
+        user.IsActive = true;
+        await _userRepo.Update(user);
+        _logger.LogInformation("Admin reactivated user {UserId}", userId);
+    }
 }

@@ -16,4 +16,6 @@ public interface IBookingRepository
     Task<Booking> UpdateAsync(Booking booking);
     Task<bool> DeleteAsync(string bookingId);
     Task<bool> ExistsByPnrCodeAsync(string pnrCode);
+    Task<IList<Booking>> GetByUserIdAndStatusAsync(int userId, string status);
+    Task<IList<Booking>> GetAllAsync();
 }

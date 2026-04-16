@@ -20,6 +20,18 @@ public class BookingController : ControllerBase
         _logger = logger;
     }
 
+    // GET /api/bookings - Get all bookings (Admin only)
+    [HttpGet]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(IList<BookingResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetAllBookings()
+    {
+        var bookings = await _bookingService.GetAllBookingsAsync();
+        return Ok(bookings);
+    }
+
     // POST /api/bookings - Create a new booking
     [HttpPost]
     [Authorize]
@@ -30,7 +42,7 @@ public class BookingController : ControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
-        
+
         try
         {
             var booking = await _bookingService.CreateBookingAsync(userId.Value, dto);
@@ -56,14 +68,14 @@ public class BookingController : ControllerBase
         var booking = await _bookingService.GetBookingByIdAsync(id);
         if (booking == null)
             return NotFound(new ErrorResponseDto { Message = $"Booking {id} not found", StatusCode = 404 });
-        
+
         // Verify ownership or admin
         var userId = GetCurrentUserId();
         var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-        
+
         if (booking.UserId != userId && userRole != "ADMIN")
             return Forbid();
-        
+
         return Ok(booking);
     }
 
@@ -77,7 +89,7 @@ public class BookingController : ControllerBase
         var booking = await _bookingService.GetBookingByPnrAsync(pnr);
         if (booking == null)
             return NotFound(new ErrorResponseDto { Message = $"Booking with PNR {pnr} not found", StatusCode = 404 });
-        
+
         return Ok(booking);
     }
 
@@ -89,7 +101,7 @@ public class BookingController : ControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
-        
+
         var bookings = await _bookingService.GetBookingsByUserAsync(userId.Value);
         return Ok(bookings);
     }
@@ -102,7 +114,7 @@ public class BookingController : ControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
-        
+
         var bookings = await _bookingService.GetUpcomingBookingsAsync(userId.Value);
         return Ok(bookings);
     }
@@ -184,7 +196,7 @@ public class BookingController : ControllerBase
     {
         if (dto.BookingId != id)
             return BadRequest(new ErrorResponseDto { Message = "Booking ID mismatch", StatusCode = 400 });
-        
+
         try
         {
             var booking = await _bookingService.AddAddOnsAsync(id, dto);
@@ -214,5 +226,37 @@ public class BookingController : ControllerBase
     {
         var claim = User.FindFirst("userId")?.Value;
         return claim != null && int.TryParse(claim, out var id) ? id : null;
+    }
+
+    [HttpGet("user/{userId:int}/past")]
+    [Authorize]
+    public async Task<IActionResult> GetPastBookings(int userId) =>
+    Ok(await _bookingService.GetPastBookingsAsync(userId));
+
+    // GET /api/bookings/flight/{flightId}/revenue-summary
+    // Internal — called by Flight service for revenue analytics
+    [HttpGet("flight/{flightId:int}/revenue-summary")]
+    [Authorize]
+    public async Task<IActionResult> GetFlightRevenueSummary(int flightId)
+    {
+        var bookings = await _bookingService.GetBookingsByFlightAsync(flightId);
+
+        var revenueByClass = new Dictionary<string, decimal>
+        {
+            ["Economy"] = 0,
+            ["Business"] = 0,
+            ["First"] = 0
+        };
+
+        // Simple aggregation — in production this would join with fare class data
+        var totalRevenue = bookings.Sum(b => b.TotalFare);
+        var totalBookings = bookings.Count;
+
+        return Ok(new
+        {
+            TotalBookings = totalBookings,
+            TotalRevenue = totalRevenue,
+            RevenueByClass = revenueByClass
+        });
     }
 }

@@ -13,6 +13,8 @@ public interface IFlightService
     Task UpdateStatusAsync(int flightId, string status);
     Task DeleteFlightAsync(int flightId);
 
+    Task<IList<FlightResponse>> GetFlightsByStatusAsync(string status);
+
     // Search
     Task<IList<FlightResponse>> SearchFlightsAsync(FlightSearchRequest request);
     Task<Dictionary<string, IList<FlightResponse>>> SearchRoundTripAsync(RoundTripSearchRequest request);
@@ -23,4 +25,5 @@ public interface IFlightService
     // Seat counter (called by Booking service)
     Task<bool> DecrementSeatsAsync(int flightId, int count);
     Task IncrementSeatsAsync(int flightId, int count);
+    Task<FlightRevenueDto> GetFlightRevenueAsync(int flightId);
 }

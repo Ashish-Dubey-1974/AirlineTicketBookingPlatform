@@ -18,8 +18,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Notification.API"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Airline.API", "SkyBooker.Airline.API\SkyBooker.Airline.API.csproj", "{A1000008-0000-0000-0000-000000000008}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyBooker.Web", "SkyBooker.Web\SkyBooker.Web.csproj", "{A1000009-0000-0000-0000-000000000009}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

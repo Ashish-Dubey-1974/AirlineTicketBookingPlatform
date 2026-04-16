@@ -13,13 +13,13 @@ public class SeatController : ControllerBase
 {
     private readonly ISeatService _seatService;
     private readonly ILogger<SeatController> _logger;
-    
+
     public SeatController(ISeatService seatService, ILogger<SeatController> logger)
     {
         _seatService = seatService;
         _logger = logger;
     }
-    
+
     [HttpPost("flight/{flightId}/batch")]
     [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> AddSeatsForFlight(int flightId, [FromBody] IList<CreateSeatDto> seats)
@@ -27,7 +27,7 @@ public class SeatController : ControllerBase
         await _seatService.AddSeatsForFlightAsync(flightId, seats);
         return CreatedAtAction(nameof(GetSeatMap), new { flightId }, new { message = $"Added {seats.Count} seats" });
     }
-    
+
     [HttpGet("map/{flightId}")]
     [Authorize]
     public async Task<IActionResult> GetSeatMap(int flightId)
@@ -35,7 +35,7 @@ public class SeatController : ControllerBase
         var seats = await _seatService.GetSeatMapAsync(flightId);
         return Ok(seats);
     }
-    
+
     [HttpGet("available/{flightId}")]
     [Authorize]
     public async Task<IActionResult> GetAvailableSeats(int flightId)
@@ -43,7 +43,7 @@ public class SeatController : ControllerBase
         var seats = await _seatService.GetAvailableSeatsAsync(flightId);
         return Ok(seats);
     }
-    
+
     [HttpGet("{seatId}")]
     [Authorize]
     public async Task<IActionResult> GetSeatById(int seatId)
@@ -52,14 +52,14 @@ public class SeatController : ControllerBase
         if (seat == null) return NotFound();
         return Ok(seat);
     }
-    
+
     [HttpPut("{seatId}/hold")]
     [Authorize]
     public async Task<IActionResult> HoldSeat(int seatId)
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
-        
+
         try
         {
             var seat = await _seatService.HoldSeatAsync(seatId, userId.Value);
@@ -74,7 +74,7 @@ public class SeatController : ControllerBase
             return Conflict(new { message = ex.Message });
         }
     }
-    
+
     [HttpPut("{seatId}/release")]
     [Authorize]
     public async Task<IActionResult> ReleaseSeat(int seatId)
@@ -82,7 +82,7 @@ public class SeatController : ControllerBase
         await _seatService.ReleaseSeatAsync(seatId);
         return Ok(new { message = "Seat released" });
     }
-    
+
     [HttpGet("count/{flightId}/{seatClass}")]
     [AllowAnonymous]
     public async Task<IActionResult> CountAvailableByClass(int flightId, string seatClass)
@@ -90,7 +90,7 @@ public class SeatController : ControllerBase
         var count = await _seatService.CountAvailableByClassAsync(flightId, seatClass);
         return Ok(new { flightId, seatClass, availableCount = count });
     }
-    
+
     [HttpDelete("flight/{flightId}")]
     [Authorize(Policy = "StaffOnly")]
     public async Task<IActionResult> DeleteSeatsForFlight(int flightId)
@@ -98,10 +98,19 @@ public class SeatController : ControllerBase
         await _seatService.DeleteSeatsForFlightAsync(flightId);
         return NoContent();
     }
-    
+
     private int? GetCurrentUserId()
     {
         var claim = User.FindFirst("userId")?.Value;
         return claim != null && int.TryParse(claim, out var id) ? id : null;
     }
+
+    [HttpGet("{flightId:int}/available/{seatClass}")]
+    public async Task<IActionResult> GetAvailableByClass(int flightId, string seatClass) =>
+    Ok(await _seatService.GetAvailableByClassAsync(flightId, seatClass));
+
+    [HttpPut("{seatId:int}")]
+    [Authorize(Roles = "AIRLINE_STAFF")]
+    public async Task<IActionResult> UpdateSeat(int seatId, [FromBody] UpdateSeatDto dto) =>
+        Ok(await _seatService.UpdateSeatAsync(seatId, dto));
 }

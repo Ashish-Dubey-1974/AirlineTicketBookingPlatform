@@ -9,6 +9,7 @@ using SkyBooker.Notification.API.BackgroundServices;
 using SkyBooker.Notification.API.Consumers;
 using SkyBooker.Notification.API.Data;
 using SkyBooker.Notification.API.Services;
+using SkyBooker.Notification.API.Repositories;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -63,6 +64,7 @@ try
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<ISmsService, SmsService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 
     // MassTransit + RabbitMQ
     builder.Services.AddMassTransit(x =>

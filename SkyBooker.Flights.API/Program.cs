@@ -26,6 +26,8 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
+builder.Services.AddHttpClient();
+
 // ──────────────────────────────────────────────────────────────────
 // DATABASE — Entity Framework Core + SQL Server
 // ──────────────────────────────────────────────────────────────────
@@ -142,19 +144,19 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Auto-apply EF Core migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<FlightDbContext>();
-    try
-    {
-        db.Database.Migrate();
-        Log.Information("FlightDbContext migrations applied successfully.");
-    }
-    catch (Exception ex)
-    {
-        Log.Warning("DB migration skipped (may already be up to date): {Message}", ex.Message);
-    }
-}
+// using (var scope = app.Services.CreateScope())
+// {
+//     var db = scope.ServiceProvider.GetRequiredService<FlightDbContext>();
+//     try
+//     {
+//         db.Database.Migrate();
+//         Log.Information("FlightDbContext migrations applied successfully.");
+//     }
+//     catch (Exception ex)
+//     {
+//         Log.Warning("DB migration skipped (may already be up to date): {Message}", ex.Message);
+//     }
+// }
 
 if (app.Environment.IsDevelopment())
 {

@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using SkyBooker.Payment.API.Data;
 using SkyBooker.Payment.API.Services;
+using SkyBooker.Payment.API.Repositories;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -40,6 +41,7 @@ try
 
     // Dependency Injection
     builder.Services.AddScoped<IPaymentService, PaymentService>();
+    builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
     // JWT Authentication
     var jwtSecret = builder.Configuration["JwtSettings:Secret"]

@@ -23,10 +23,14 @@ public class RegisterDto
     [Compare(nameof(Password), ErrorMessage = "Passwords do not match")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
-    [Phone]
+    [Phone(ErrorMessage = "Invalid phone number")]
     [MaxLength(20)]
     public string? Phone { get; set; }
-    
+
     [MaxLength(60)]
-    public string? Nationality{get;set;}
+    public string? Nationality { get; set; }
+
+    // NOTE: Role is intentionally NOT exposed here.
+    // All self-registered users default to PASSENGER (set in AuthService).
+    // Admins assign roles via PUT /api/auth/users/{id}/role.
 }
